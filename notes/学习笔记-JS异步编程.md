@@ -152,17 +152,17 @@ ajax('/api/urls.json').then(function (urls) {
 // 注意区分二者差异
 // 只能捕获前一个 promise 抛出的异常
 ajax('/api/users.json')
-	.then(function onFulfilled (value) {
-  	console.log('onFulfilled', value)
-  	// return ajax('/error-url') // 这个异常就不会被捕获
+  .then(function onFulfilled (value) {
+		console.log('onFulfilled', value)
+		// return ajax('/error-url') // 这个异常就不会被捕获
 	}, function onRejected (error) {
-  	console.log('onRejected', error)
+		console.log('onRejected', error)
 	})
 
 // promise 链条上任何一个异常都会被向后传递直至被捕获
 ajax('/api/user1.json')
-	.then(function onFulfilled (value) {
-  	console.log('onFulfilled', value)
+  .then(function onFulfilled (value) {
+		console.log('onFulfilled', value)
 	}) // 更像是为整个 Promise 链条注册失败回调
 	.catch(function onRejected (error) {
   	console.log('onRejected', error)
@@ -196,7 +196,7 @@ process.on('unhandledRejection', (reason, promise) => {
 Promise.resolve() // 快速转换为 promise 对象
 
 Promise.resolve('foo')
-	.then(function (value) {
+  .then(function (value) {
   	console.log(value)
 	})
 
