@@ -340,3 +340,144 @@ Promise 的回调会作为微任务执行
 */
 ```
 
+
+
+#### Generator 异步方案
+
+##### 生成器回顾
+
+```javascript
+function * foo () {
+  console.log('start')
+  
+  try {
+    const res = yield 'foo' // res
+    console.log(res) // res 的值
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+const generator = foo() // 得到生成器对象
+
+const result = generator.next() // 执行 next()，
+// 生成器函数会在 yield 出中断，将 yield 后的值作为 value 返回
+console.log(result) // { value: "foo", done: false }
+
+// generator.next('bar') // 如果执行此步骤，生成器函数会从中断处继续执行，next() 传递的参数会作为 yield 的返回值，即 res = 'bar'
+
+generator.throw(new Error('Generator error')) // 生成器对象手动抛出异常，生成器函数也会从中断处继续执行，只是会捕获到异常并打印
+// Error: Generator error
+```
+
+
+
+##### Generator 配合 Promise 的异步方法
+
+```javascript
+function * main () {
+  const users = yield ajax('/api/users.json')
+  console.log(users) // users 便是传递进来的 data
+  
+  const posts = yield ajax('/api/posts.json')
+  console.log(posts)
+}
+
+const g = main()
+
+const result = g.next()
+// result.value 便是 yield 后 ajax() 返回的 Promise 对象
+
+result.value.then(data => {
+  const result2 = g.next(data) 
+  // 将数据传递进生成器函数，函数会从中断处继续执行，同时得到异步操作的结果，并打印，并且会在遇到下一个 yield 是中断
+  // 此时 result2.value 便是第二个 yield 后 ajax() 返回的 Promise 对象
+  
+  if(result2.done) return
+  
+  result2.value.then(data => {
+    g.next(data) // 再次传递进生成器函数，函数从中断处启动
+  })
+})
+// 上述代码，相同部分可以改造成递归函数
+
+// 改造如下
+function handleResult (result) {
+  if (result.done) return
+  result.value.then(data => {
+    handleResult(g.next(data))
+  }, error => {
+    g.throw(error)
+  })
+}
+// 同时需要改造 main 函数，函数内部需要能够捕获异常
+function * main () {
+  try {
+    // xxxxxxxx
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+handleResult(g.next())
+// 只要生成器不结束，就会一直递归下去，将生成器函数内所有异步函数依次全部执行
+```
+
+上述改造的便是生成器函数执行器，总结如下
+
+```javascript
+function co (generator) {
+  const g = generator()
+  
+  function handleResult (result) {
+    if (result.done) return
+    result.value.then(data => {
+      handleResult(g.next(data))
+    }, error => {
+      g.throw(error)
+    })
+  }
+  
+  handleResult(g.next())
+}
+
+co(main)
+
+// 此便是 co 函数的基本框架，让异步调用回归扁平化
+```
+
+
+
+#### Async
+
+async / await 其实是 Promise 的语法糖，但只要理解上述 生成器执行器的工作原理，就能轻松掌握 async / await 函数的运用
+
+```javascript
+async function main () {
+  try {
+    const users = await ajax('/api/users.json')
+    console.log(users)
+    
+    const posts = await ajax('/api/posts.json')
+    console.log(posts)
+    
+    const urls = await ajax('/api/urls.json')
+    console.log(urls)
+  } catch (e) {
+    console.log(e)
+  }
+}
+
+const promise = main()
+
+promise.then(() => {
+  console.log('all completed')
+})
+```
+
+> - async / await 函数不再需要像生成器一样配合执行器使用
+> - async 函数执行后会返回 Promise 对象
+> - 目前，async 与 await 必须配套使用，await 关键词只能出现在 async 修饰的函数内 
+
+
+
