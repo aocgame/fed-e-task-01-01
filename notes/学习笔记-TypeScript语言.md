@@ -943,3 +943,5 @@ yarn add query-string # 解析 url 中 query string
 
 [declare 拓展阅读](https://www.tslang.cn/docs/handbook/declaration-files/introduction.html)
 
+[声明文件](https://ts.xcatliu.com/basics/declaration-files)
+
